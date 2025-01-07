@@ -31,7 +31,19 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
       const xmlText = await response.text();
       const items = xmlText.match(/<title>(?!Daily Search Trends)(.*?)<\/title>/g) || [];
 
-      const categories = ['trending', 'community', 'science', 'tech', 'travel', 'politics', 'health', 'sports', 'finance', 'football'] as const;
+      const categories = [
+        'ai',           // Artificial Intelligence topics
+        'tech',         // General technology
+        'innovation',   // New technological innovations
+        'science',      // Scientific discoveries
+        'startup',      // Tech startups and companies
+        'cybersec',     // Cybersecurity
+        'data',         // Data science and analytics
+        'robotics',     // Robotics and automation
+        'dev',          // Software development
+        'research',     // Tech research and papers
+        'skip'          // For non-tech topics
+      ] as const;
 
       const schema = z.object({
         category: z.enum(categories),
@@ -40,9 +52,17 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
       const itemsWithCategoryAndIcon = await Promise.all(items.map(async item => {
         const { object } = await generateObject({
           model: xai("grok-beta"),
-          prompt: `Give the category for the topic from the existing values only in lowercase only: ${item.replace(/<\/?title>/g, '')}
+          prompt: `Analyze this topic and categorize it into one of these tech-focused categories (lowercase only): ${categories.join(', ')}
+
+          Topic: ${item.replace(/<\/?title>/g, '')}
           
-          - if the topic category isn't present in the list, please select 'trending' only!`,
+          Rules:
+          - Only use the exact categories listed above
+          - Focus on identifying tech and AI relevance
+          - If not clearly tech/AI related, skip this item by returning 'skip'
+          - For general tech news use 'tech'
+          - For AI-specific news use 'ai'
+          - For new tech products/services use 'innovation'`,
           schema,
           temperature: 0,
         });
@@ -54,7 +74,12 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
         };
       }));
 
-      return itemsWithCategoryAndIcon;
+      // Filter out non-tech topics and limit to most relevant
+      const techItems = itemsWithCategoryAndIcon
+        .filter(item => item.category !== 'skip')
+        .slice(0, 20);
+
+      return techItems;
     } catch (error) {
       console.error(`Failed to fetch Google Trends for geo: ${geo}`, error);
       return [];
@@ -114,23 +139,33 @@ export async function GET(req: Request) {
     const trends = await fetchFromMultipleSources();
 
     if (trends.length === 0) {
-      // Fallback queries if both sources fail
-      console.error('Both sources failed to fetch trends, returning fallback queries');
+      // Tech-focused fallback queries
+      console.error('Failed to fetch trends, returning fallback tech queries');
       return NextResponse.json([
         {
-          icon: 'sparkles',
-          text: "What causes the Northern Lights?",
-          category: 'science'
+          icon: 'ai',
+          text: "Latest developments in GPT-4 and large language models",
+          category: 'ai'
         },
         {
-          icon: 'code',
-          text: "Explain quantum computing",
+          icon: 'tech',
+          text: "Breakthrough in quantum computing research",
           category: 'tech'
         },
         {
-          icon: 'globe',
-          text: "Most beautiful places in Japan",
-          category: 'travel'
+          icon: 'innovation',
+          text: "New advancements in autonomous vehicles",
+          category: 'innovation'
+        },
+        {
+          icon: 'cybersec',
+          text: "Latest trends in AI cybersecurity",
+          category: 'cybersec'
+        },
+        {
+          icon: 'robotics',
+          text: "Innovations in humanoid robots",
+          category: 'robotics'
         }
       ]);
     }

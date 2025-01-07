@@ -593,7 +593,7 @@ const HomeContent = () => {
     });
 
     const CACHE_KEY = 'trendingQueriesCache';
-    const CACHE_DURATION = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
     // Add this type definition
     interface TrendingQueriesCache {

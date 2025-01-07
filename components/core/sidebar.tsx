@@ -138,7 +138,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         >
           <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          {!isCollapsed && <span className="ml-2">Toggle theme</span>}
+          {!isCollapsed && <span className="ml-2">{theme === 'dark' ? 'Go Light' : 'Go Dark'}</span>}
         </Button>
 
         {/* Download Button at Bottom */}
