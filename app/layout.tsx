@@ -3,22 +3,22 @@ import { GeistSans } from 'geist/font/sans';
 import 'katex/dist/katex.min.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Metadata, Viewport } from "next";
-import { Instrument_Serif } from 'next/font/google';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from './providers';
+import { LayoutWithSidebar } from "@/components/core/layout-with-sidebar";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mplx.run"),
-  title: "MiniPerplx",
-  description: "MiniPerplx is a minimalistic AI-powered search engine that helps you find information on the internet.",
+  title: "ShinyPerplx",
+  description: "ShinyPerplx is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
     url: "https://mplx.run",
-    siteName: "MiniPerplx",
+    siteName: "ShinyPerplx",
   },
   keywords: [
-    "MiniPerplx",
+    "ShinyPerplx",
     "mplx",
     "mplx.run",
     "search engine",
@@ -26,7 +26,11 @@ export const metadata: Metadata = {
     "ai search engine",
     "perplexity",
     "minimalistic search engine",
-  ]
+  ],
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+  },
 };
 
 export const viewport: Viewport = {
@@ -41,16 +45,6 @@ export const viewport: Viewport = {
   ]
 }
 
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  style: ['normal', 'italic'],
-  variable: "--font-serif",
-  preload: true,
-  display: 'swap',
-  fallback: ['sans-serif'],
-})
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -58,11 +52,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${GeistSans.variable} ${instrumentSerif.variable} font-sans antialiased`}>
+      <body className={`${GeistSans.variable} font-sans antialiased`}>
         <NuqsAdapter>
           <Providers>
             <Toaster position="top-center" richColors />
-            {children}
+            <LayoutWithSidebar>
+              {children}
+            </LayoutWithSidebar>
           </Providers>
         </NuqsAdapter>
         <Analytics />

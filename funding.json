@@ -6,16 +6,16 @@
         "name": "Zaid Mukaddam",
         "email": "hey@zaidmukaddam.com",
         "phone": "",
-        "description": "I built MiniPerplx, a minimalistic open source AI Powered Search Engine.",
+        "description": "I built ShinyPerplx, a minimalistic open source AI Powered Search Engine.",
         "webpageUrl": {
             "url": "https://github.com/zaidmukaddam/miniperplx"
         }
     },
     "projects": [
         {
-            "guid": "miniperplx",
-            "name": "MiniPerplx",
-            "description": "MiniPerplx is a minimalistic open source AI Powered Search Engine.",
+            "guid": "shinyperplx",
+            "name": "ShinyPerplx",
+            "description": "ShinyPerplx is a minimalistic open source AI Powered Search Engine.",
             "webpageUrl": {
                 "url": "https://github.com/zaidmukaddam/miniperplx"
             },

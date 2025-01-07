@@ -493,10 +493,10 @@ const SponsorDialog = ({
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                        Support MiniPerplx
+                        Support ShinyPerplx
                     </h2>
                     <p className="text-neutral-600 dark:text-neutral-400 mt-2 text-pretty">
-                        Help keep MiniPerplx running, bring in the best LLMs and be ad-free. Your support enables continuous improvements and new features.
+                        Help keep ShinyPerplx running, bring in the best LLMs and be ad-free. Your support enables continuous improvements and new features.
                     </p>
                 </div>
             </div>
@@ -761,9 +761,9 @@ const HomeContent = () => {
                 "https://metwm7frkvew6tn1.public.blob.vercel-storage.com/mplx-changelogs/mplx-collab.jpeg",
             ],
             content: `
-## **MiniPerplx x Vercel x xAI Collab**
+## **ShinyPerplx x Vercel x xAI Collab**
 
-Excited to annouce that MiniPerplx has partnered with Vercel and xAI to bring you the best of AI search experience.
+Excited to annouce that ShinyPerplx has partnered with Vercel and xAI to bring you the best of AI search experience.
 Grok 2 models are now available for you to try out.
 `
         }
@@ -2390,56 +2390,6 @@ Grok 2 models are now available for you to try out.
         }
     }, [input, messages, editingMessageIndex, setMessages, handleSubmit]);
 
-    interface NavbarProps { }
-
-    const Navbar: React.FC<NavbarProps> = () => {
-        return (
-            <div className="fixed top-0 left-0 right-0 z-[60] flex justify-between items-center p-4 bg-white dark:bg-neutral-950 font-sans">
-                <Link href="/new">
-                    <Button
-                        type="button"
-                        variant={'secondary'}
-                        className="rounded-full bg-neutral-200 dark:bg-neutral-800 group transition-all hover:scale-105 pointer-events-auto"
-                    >
-                        <Plus size={18} className="group-hover:rotate-90 transition-all" />
-                        <span className="text-sm ml-2 group-hover:block hidden animate-in fade-in duration-300">
-                            New
-                        </span>
-                    </Button>
-                </Link>
-                <div className='flex items-center space-x-4'>
-                    <Link
-                        target="_blank"
-                        href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzaidmukaddam%2Fminiperplx&env=XAI_API_KEY,UPSTASH_REDIS_REST_URL,UPSTASH_REDIS_REST_TOKEN,AVIATION_STACK_API_KEY,SANDBOX_TEMPLATE_ID,TMDB_API_KEY,NEXT_PUBLIC_POSTHOG_KEY,NEXT_PUBLIC_POSTHOG_HOST,YT_ENDPOINT,EXA_API_KEY,TRIPADVISOR_API_KEY,BLOB_READ_WRITE_TOKEN,ELEVENLABS_API_KEY,AZURE_TRANSLATOR_LOCATION,AZURE_TRANSLATOR_KEY,AZURE_RESOURCE_NAME,AZURE_API_KEY,MAPBOX_ACCESS_TOKEN,NEXT_PUBLIC_MAPBOX_TOKEN,FIRECRAWL_API_KEY,TAVILY_API_KEY,OPENWEATHER_API_KEY,E2B_API_KEY,GOOGLE_MAPS_API_KEY,NEXT_PUBLIC_GOOGLE_MAPS_API_KEY&envDescription=All%20environment%20variables%20needed%20for%20application"
-                        className="flex flex-row gap-2 items-center py-1.5 px-2 rounded-md text-neutral-950 bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-zinc-50 dark:hover:bg-neutral-800 dark:shadow-sm shadow-none text-sm"
-                    >
-                        <VercelIcon size={14} />
-                        <span className='hidden sm:block'>Deploy with Vercel</span>
-                        <span className='sm:hidden block'>Deploy</span>
-                    </Link>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="sm"
-                                    onClick={() => window.open("https://github.com/sponsors/zaidmukaddam", "_blank")}
-                                    className="flex items-center space-x-2 bg-red-100 dark:bg-red-900 shadow-none hover:bg-red-200 dark:hover:bg-red-800"
-                                >
-                                    <Heart className="h-4 w-4 text-red-500 dark:text-red-400" />
-                                    <span className="text-red-800 dark:text-red-200">Sponsor</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-                                <p>Sponsor this project on GitHub</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                    <ThemeToggle />
-                </div>
-            </div>
-        );
-    };
-
     const SuggestionCards: React.FC<{
         trendingQueries: TrendingQuery[];
     }> = ({ trendingQueries }) => {
@@ -2552,7 +2502,6 @@ Grok 2 models are now available for you to try out.
                                    border border-neutral-200/50 dark:border-neutral-700/50
                                    hover:border-neutral-300 dark:hover:border-neutral-600"
                         >
-
                             <div className="flex items-center gap-3 text-neutral-700 dark:text-neutral-300">
                                 <span
                                     className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3"
@@ -2582,7 +2531,6 @@ Grok 2 models are now available for you to try out.
         setSuggestedQuestions([]);
     }, []);
 
-
     const memoizedMessages = useMemo(() => messages, [messages]);
 
     const memoizedSuggestionCards = useMemo(() => (
@@ -2594,8 +2542,6 @@ Grok 2 models are now available for you to try out.
 
     return (
         <div className="flex flex-col !font-sans items-center justify-center p-2 sm:p-4 bg-background text-foreground transition-all duration-500">
-            <Navbar />
-
             <div className={`w-full max-w-[90%] !font-sans sm:max-w-2xl space-y-6 p-0 ${hasSubmitted ? 'mt-16 sm:mt-20' : 'mt-[20vh] sm:mt-[25vh]'}`}>
                 {!hasSubmitted && (
                     <div className="text-center !font-sans">
@@ -2606,7 +2552,7 @@ Grok 2 models are now available for you to try out.
                         >
                             <Flame size={14} /> What&apos;s new
                         </Badge>
-                        <h1 className="text-4xl sm:text-6xl mb-3 text-neutral-800 dark:text-neutral-100 font-serif">MiniPerplx</h1>
+                        <h1 className="text-4xl sm:text-6xl mb-3 text-neutral-800 dark:text-neutral-100 font-serif">Step into the future</h1>
                         <div className="flex flex-row items-center gap-1 justify-center text-center mx-auto !p-0 !m-0">
                             <span className="text-base text-neutral-500 dark:text-neutral-400">
                                 Powered by
@@ -2851,17 +2797,17 @@ Grok 2 models are now available for you to try out.
                         className="flex flex-row justify-between items-center w-full max-w-2xl bottom-3 fixed p-4 sm:p-auto"
                     >
                         <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                            © {new Date().getFullYear()} MiniPerplx
+                            © {new Date().getFullYear()} ShinyPerplx
                         </div>
                         <Tooltip delayDuration={100}>
                             <TooltipTrigger>
                                 <a
-                                    href="https://x.com/zaidmukaddam"
+                                    href="https://x.com/ShinyObjectSC"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors text-neutral-600 dark:text-neutral-400"
                                 >
-                                    @zaidmukaddam
+                                    @ShinyObjectSC
                                 </a>
                             </TooltipTrigger>
                             <TooltipContent
@@ -2887,7 +2833,7 @@ const LoadingFallback = () => (
         <div className="backdrop-blur-xl bg-white/30 dark:bg-neutral-900/30 p-8 rounded-2xl border border-neutral-200/20 dark:border-neutral-700/20 shadow-xl">
             <div className="text-center space-y-6">
                 <h1 className="text-4xl sm:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 to-neutral-600 dark:from-white dark:to-neutral-400">
-                    MiniPerplx
+                    ShinyPerplx
                 </h1>
                 <p className="text-base sm:text-lg text-neutral-600 dark:text-neutral-400">
                     Loading your minimalist AI experience
