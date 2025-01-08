@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn, SearchGroup, SearchGroupId, searchGroups } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { useQueryLimit } from '@/hooks/use-query-limit';
+import { UpgradePrompt } from '@/components/upgrade-prompt';
 
 interface ModelSwitcherProps {
     selectedModel: string;
@@ -595,6 +597,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
     selectedGroup,
     setSelectedGroup,
 }) => {
+    const { checkAndTrackQuery, isAuthenticated } = useQueryLimit();
+    const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
     const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
     const { width } = useWindowSize();
     const postSubmitFileInputRef = useRef<HTMLInputElement>(null);
@@ -687,27 +691,46 @@ const FormComponent: React.FC<FormComponentProps> = ({
         setAttachments(prev => prev.filter((_, i) => i !== index));
     };
 
-    const onSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    const onSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         event.stopPropagation();
 
+        if (!isAuthenticated) {
+            toast.error("Please sign in to make queries");
+            return;
+        }
+
         if (input.trim() || attachments.length > 0) {
-            setHasSubmitted(true);
-            lastSubmittedQueryRef.current = input.trim();
-            // track("search input", { query: input.trim() });
+            try {
+                // Check query limit before proceeding
+                await checkAndTrackQuery({
+                    query: input.trim(),
+                    model: selectedModel,
+                    attachments: attachments.length
+                });
 
-            handleSubmit(event, {
-                experimental_attachments: attachments,
-            });
+                setHasSubmitted(true);
+                lastSubmittedQueryRef.current = input.trim();
 
-            setAttachments([]);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
+                handleSubmit(event, {
+                    experimental_attachments: attachments,
+                });
+
+                setAttachments([]);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            } catch (error) {
+                if (error instanceof Error && error.message.includes('limit exceeded')) {
+                    setShowUpgradePrompt(true);
+                } else {
+                    toast.error(error instanceof Error ? error.message : "An error occurred");
+                }
             }
         } else {
             toast.error("Please enter a search query or attach an image.");
         }
-    }, [input, attachments, setHasSubmitted, handleSubmit, setAttachments, fileInputRef, lastSubmittedQueryRef]);
+    }, [input, attachments, setHasSubmitted, handleSubmit, setAttachments, fileInputRef, lastSubmittedQueryRef, checkAndTrackQuery, isAuthenticated, selectedModel]);
 
     const submitForm = useCallback(() => {
         onSubmit({ preventDefault: () => { }, stopPropagation: () => { } } as React.FormEvent<HTMLFormElement>);
@@ -732,140 +755,145 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }, [attachments.length, hasSubmitted, fileInputRef]);
 
     return (
+        <>
+            <div className={cn(
+                "relative w-full flex flex-col gap-2 rounded-lg transition-all duration-300 !font-sans",
+                hasSubmitted ?? "z-[51]",
+                attachments.length > 0 || uploadQueue.length > 0
+                    ? "bg-gray-100/70 dark:bg-neutral-800 p-1"
+                    : "bg-transparent"
+            )}>
+                <input type="file" className="hidden" ref={fileInputRef} multiple onChange={handleFileChange} accept="image/*" tabIndex={-1} />
+                <input type="file" className="hidden" ref={postSubmitFileInputRef} multiple onChange={handleFileChange} accept="image/*" tabIndex={-1} />
 
-        <div className={cn(
-            "relative w-full flex flex-col gap-2 rounded-lg transition-all duration-300 !font-sans",
-            hasSubmitted ?? "z-[51]",
-            attachments.length > 0 || uploadQueue.length > 0
-                ? "bg-gray-100/70 dark:bg-neutral-800 p-1"
-                : "bg-transparent"
-        )}>
-            <input type="file" className="hidden" ref={fileInputRef} multiple onChange={handleFileChange} accept="image/*" tabIndex={-1} />
-            <input type="file" className="hidden" ref={postSubmitFileInputRef} multiple onChange={handleFileChange} accept="image/*" tabIndex={-1} />
-
-            {(attachments.length > 0 || uploadQueue.length > 0) && (
-                <div className="flex flex-row gap-2 overflow-x-auto py-2 max-h-32 z-10">
-                    {/* Existing attachment previews */}
-                    {attachments.map((attachment, index) => (
-                        <AttachmentPreview
-                            key={attachment.url}
-                            attachment={attachment}
-                            onRemove={() => removeAttachment(index)}
-                            isUploading={false}
-                        />
-                    ))}
-                    {uploadQueue.map((filename) => (
-                        <AttachmentPreview
-                            key={filename}
-                            attachment={{
-                                url: "",
-                                name: filename,
-                                contentType: "",
-                                size: 0,
-                            } as Attachment}
-                            onRemove={() => { }}
-                            isUploading={true}
-                        />
-                    ))}
-                </div>
-            )}
-
-            <div className="relative rounded-lg bg-neutral-100 dark:bg-neutral-900">
-                <Textarea
-                    ref={inputRef}
-                    placeholder={hasSubmitted ? "Ask a new question..." : "Ask a question..."}
-                    value={input}
-                    onChange={handleInput}
-                    disabled={isLoading}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    className={cn(
-                        "min-h-[56px] max-h-[400px] w-full resize-none rounded-lg",
-                        "overflow-x-hidden",
-                        "text-base leading-relaxed",
-                        "bg-neutral-100 dark:bg-neutral-900",
-                        "border border-neutral-200 dark:border-neutral-700",
-                        "focus:border-neutral-300 dark:focus:border-neutral-600",
-                        "text-neutral-900 dark:text-neutral-100",
-                        "focus:!ring-1 focus:!ring-neutral-300 dark:focus:!ring-neutral-600",
-                        "px-4 pt-3 pb-5"
-                    )}
-                    rows={3}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            if (isLoading) {
-                                toast.error("Please wait for the response to complete!");
-                            } else {
-                                submitForm();
-                            }
-                        }
-                    }}
-                />
-
-                <div className={cn(
-                    "absolute bottom-0 inset-x-0 flex justify-between items-center rounded-b-lg p-2",
-                    "bg-neutral-100 dark:bg-neutral-900",
-                    "!border !border-t-0 !border-neutral-200 dark:!border-neutral-700",
-                    isFocused ? "!border-neutral-300 dark:!border-neutral-600" : "",
-                    isLoading ? "!opacity-20 !cursor-not-allowed" : ""
-                )}>
-                    <div className="flex items-center gap-2">
-                        {!hasSubmitted ?
-                            <GroupSelector
-                                selectedGroup={selectedGroup}
-                                onGroupSelect={handleGroupSelect}
+                {(attachments.length > 0 || uploadQueue.length > 0) && (
+                    <div className="flex flex-row gap-2 overflow-x-auto py-2 max-h-32 z-10">
+                        {/* Existing attachment previews */}
+                        {attachments.map((attachment, index) => (
+                            <AttachmentPreview
+                                key={attachment.url}
+                                attachment={attachment}
+                                onRemove={() => removeAttachment(index)}
+                                isUploading={false}
                             />
-                            : null
-                        }
-                        <ModelSwitcher
-                            selectedModel={selectedModel}
-                            setSelectedModel={setSelectedModel}
-                        />
+                        ))}
+                        {uploadQueue.map((filename) => (
+                            <AttachmentPreview
+                                key={filename}
+                                attachment={{
+                                    url: "",
+                                    name: filename,
+                                    contentType: "",
+                                    size: 0,
+                                } as Attachment}
+                                onRemove={() => { }}
+                                isUploading={true}
+                            />
+                        ))}
                     </div>
+                )}
 
-                    <div className="flex items-center gap-2">
-                        {hasVisionSupport(selectedModel) && (
-                            <Button
-                                className="rounded-full p-1.5 h-8 w-8 bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600"
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    triggerFileInput();
-                                }}
-                                variant="outline"
-                                disabled={isLoading}
-                            >
-                                <PaperclipIcon size={14} />
-                            </Button>
+                <div className="relative rounded-lg bg-neutral-100 dark:bg-neutral-900">
+                    <Textarea
+                        ref={inputRef}
+                        placeholder={hasSubmitted ? "Ask a new question..." : "Ask a question..."}
+                        value={input}
+                        onChange={handleInput}
+                        disabled={isLoading}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
+                        className={cn(
+                            "min-h-[56px] max-h-[400px] w-full resize-none rounded-lg",
+                            "overflow-x-hidden",
+                            "text-base leading-relaxed",
+                            "bg-neutral-100 dark:bg-neutral-900",
+                            "border border-neutral-200 dark:border-neutral-700",
+                            "focus:border-neutral-300 dark:focus:border-neutral-600",
+                            "text-neutral-900 dark:text-neutral-100",
+                            "focus:!ring-1 focus:!ring-neutral-300 dark:focus:!ring-neutral-600",
+                            "px-4 pt-3 pb-5"
                         )}
-
-                        {isLoading ? (
-                            <Button
-                                className="rounded-full p-1.5 h-8 w-8"
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    stop();
-                                }}
-                                variant="destructive"
-                            >
-                                <StopIcon size={14} />
-                            </Button>
-                        ) : (
-                            <Button
-                                className="rounded-full p-1.5 h-8 w-8"
-                                onClick={(event) => {
-                                    event.preventDefault();
+                        rows={3}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter" && !event.shiftKey) {
+                                event.preventDefault();
+                                if (isLoading) {
+                                    toast.error("Please wait for the response to complete!");
+                                } else {
                                     submitForm();
-                                }}
-                                disabled={input.length === 0 && attachments.length === 0 || uploadQueue.length > 0}
-                            >
-                                <ArrowUpIcon size={14} />
-                            </Button>
-                        )}
+                                }
+                            }
+                        }}
+                    />
+
+                    <div className={cn(
+                        "absolute bottom-0 inset-x-0 flex justify-between items-center rounded-b-lg p-2",
+                        "bg-neutral-100 dark:bg-neutral-900",
+                        "!border !border-t-0 !border-neutral-200 dark:!border-neutral-700",
+                        isFocused ? "!border-neutral-300 dark:!border-neutral-600" : "",
+                        isLoading ? "!opacity-20 !cursor-not-allowed" : ""
+                    )}>
+                        <div className="flex items-center gap-2">
+                            {!hasSubmitted ?
+                                <GroupSelector
+                                    selectedGroup={selectedGroup}
+                                    onGroupSelect={handleGroupSelect}
+                                />
+                                : null
+                            }
+                            <ModelSwitcher
+                                selectedModel={selectedModel}
+                                setSelectedModel={setSelectedModel}
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {hasVisionSupport(selectedModel) && (
+                                <Button
+                                    className="rounded-full p-1.5 h-8 w-8 bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        triggerFileInput();
+                                    }}
+                                    variant="outline"
+                                    disabled={isLoading}
+                                >
+                                    <PaperclipIcon size={14} />
+                                </Button>
+                            )}
+
+                            {isLoading ? (
+                                <Button
+                                    className="rounded-full p-1.5 h-8 w-8"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        stop();
+                                    }}
+                                    variant="destructive"
+                                >
+                                    <StopIcon size={14} />
+                                </Button>
+                            ) : (
+                                <Button
+                                    className="rounded-full p-1.5 h-8 w-8"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        submitForm();
+                                    }}
+                                    disabled={input.length === 0 && attachments.length === 0 || uploadQueue.length > 0}
+                                >
+                                    <ArrowUpIcon size={14} />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <UpgradePrompt 
+                isOpen={showUpgradePrompt} 
+                onClose={() => setShowUpgradePrompt(false)} 
+            />
+        </>
     );
 };
 

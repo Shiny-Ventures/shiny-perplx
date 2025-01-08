@@ -141,3 +141,33 @@ h1 {
     @apply bg-background text-foreground;
   }
 }
+
+/* Auth Form Styles */
+.auth-container {
+  width: 100%;
+}
+
+.auth-button {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.light-input {
+  @apply bg-white border-input text-foreground;
+}
+
+.dark-input {
+  @apply bg-neutral-800 border-neutral-700 text-neutral-100;
+}
+
+/* Override Supabase Auth UI styles */
+.dark [data-theme="dark"] {
+  --colors-inputBackground: rgb(38, 38, 38);
+  --colors-inputText: rgb(250, 250, 250);
+  --colors-inputBorder: rgb(64, 64, 64);
+}
+
+.light [data-theme="light"] {
+  --colors-inputBackground: white;
+  --colors-inputText: rgb(23, 23, 23);
+  --colors-inputBorder: rgb(229, 229, 229);
+}

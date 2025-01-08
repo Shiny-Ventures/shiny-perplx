@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, FolderKanban, Library, Download, ChevronLeft, ChevronRight, Plus, Sun, Moon } from 'lucide-react';
+import { Home, Compass, FolderKanban, Library, Download, ChevronLeft, ChevronRight, Plus, Sun, Moon, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
+import { useAuth } from '@/contexts/auth-context';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -16,6 +17,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const sidebarWidth = isCollapsed ? 'w-[60px]' : 'w-[240px]';
+  const { user, signOut, loading } = useAuth();
   
   const handleNewClick = () => {
     window.location.reload();
@@ -141,16 +143,32 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           {!isCollapsed && <span className="ml-2">{theme === 'dark' ? 'Go Light' : 'Go Dark'}</span>}
         </Button>
 
-        {/* Download Button at Bottom */}
+        {/* Auth Button at Bottom */}
         <div className="mt-auto">
           <Button
             variant="outline"
             className={`w-full ${
               isCollapsed ? 'px-2' : 'px-4'
             } border-neutral-200 dark:border-neutral-800`}
+            onClick={user ? signOut : () => window.location.href = '/login'}
+            disabled={loading}
           >
-            <Download className="h-5 w-5" />
-            {!isCollapsed && <span className="ml-2">Download</span>}
+            {loading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                {!isCollapsed && <span className="ml-2">Loading...</span>}
+              </>
+            ) : user ? (
+              <>
+                <LogOut className="h-5 w-5" />
+                {!isCollapsed && <span className="ml-2">Sign Out</span>}
+              </>
+            ) : (
+              <>
+                <LogIn className="h-5 w-5" />
+                {!isCollapsed && <span className="ml-2">Sign In</span>}
+              </>
+            )}
           </Button>
         </div>
       </div>

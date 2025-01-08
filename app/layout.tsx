@@ -6,8 +6,9 @@ import { Metadata, Viewport } from "next";
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from "sonner";
 import "./globals.css";
-import { Providers } from './providers';
+import { Providers as ThemeProviders } from './providers';
 import { LayoutWithSidebar } from "@/components/core/layout-with-sidebar";
+import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mplx.run"),
@@ -51,16 +52,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.variable} font-sans antialiased`}>
-        <NuqsAdapter>
-          <Providers>
-            <Toaster position="top-center" richColors />
-            <LayoutWithSidebar>
-              {children}
-            </LayoutWithSidebar>
-          </Providers>
-        </NuqsAdapter>
+        <Providers>
+          <NuqsAdapter>
+            <ThemeProviders>
+              <Toaster position="top-center" richColors />
+              <LayoutWithSidebar>
+                {children}
+              </LayoutWithSidebar>
+            </ThemeProviders>
+          </NuqsAdapter>
+        </Providers>
         <Analytics />
       </body>
     </html>
