@@ -26,9 +26,7 @@ export const metadata: Metadata = {
     }],
   },
   keywords: [
-    "ShinyPerplx",
-    "mplx",
-    "mplx.run",
+    "Shiny Objects",
     "search engine",
     "AI",
     "ai search engine",
