@@ -11,8 +11,10 @@ export function AuthForm() {
   const { theme } = useTheme()
 
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    setRedirectUrl(`${baseUrl}/auth/callback`)
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://shiny-perplx.vercel.app' 
+      : process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    setRedirectUrl(`${baseUrl}/auth/callback`);
   }, [])
 
   if (!redirectUrl) {
