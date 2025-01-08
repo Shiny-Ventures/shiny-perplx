@@ -40,7 +40,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     { icon: Compass, label: 'Discover', href: '/discover' },
     { icon: FolderKanban, label: 'Spaces', href: '/spaces' },
     { icon: Library, label: 'Library', href: '/library' },
-    { icon: User, label: 'Account', href: '/account' },
+    ...(user ? [{ icon: User, label: 'Account', href: '/account' }] : []),
   ];
 
   return (
