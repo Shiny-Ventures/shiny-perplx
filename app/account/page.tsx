@@ -7,7 +7,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Github, Chrome, MessageSquare } from 'lucide-react';
+
+// Helper function to get provider icon and name
+function getProviderInfo(providerId: string) {
+  switch (providerId) {
+    case 'google':
+      return { icon: Chrome, name: 'Google' };
+    case 'discord':
+      return { icon: MessageSquare, name: 'Discord' };
+    case 'github':
+      return { icon: Github, name: 'GitHub' };
+    case 'email':
+    default:
+      return { icon: Mail, name: 'Email' };
+  }
+}
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -40,6 +55,11 @@ export default function AccountPage() {
   if (!user) {
     return null;
   }
+
+  // Determine the auth provider
+  const provider = user.app_metadata?.provider || 'email';
+  const { icon: ProviderIcon, name: providerName } = getProviderInfo(provider);
+  const isEmailAuth = provider === 'email';
 
   return (
     <div className="container max-w-4xl py-8 space-y-8">
@@ -98,17 +118,28 @@ export default function AccountPage() {
         <TabsContent value="profile" className="space-y-4">
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="text-sm font-medium">Email</label>
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => window.location.href = '/auth/update-password'}
-              >
-                Change Password
-              </Button>
+              
+              <div>
+                <label className="text-sm font-medium">Sign in Method</label>
+                <div className="flex items-center space-x-2 mt-1 text-muted-foreground">
+                  <ProviderIcon className="h-4 w-4" />
+                  <span>{providerName}</span>
+                </div>
+              </div>
+
+              {isEmailAuth && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = '/auth/update-password'}
+                >
+                  Change Password
+                </Button>
+              )}
             </div>
           </Card>
         </TabsContent>
