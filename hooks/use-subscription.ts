@@ -12,7 +12,7 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!user) {
       setTier('free')
       setLoading(false)
       return
@@ -23,7 +23,7 @@ export function useSubscription() {
         const { data, error } = await supabase
           .from('subscriptions')
           .select('tier')
-          .eq('user_id', user.id)
+          .eq('user_id', user!.id)
           .single()
 
         if (error || !data) {
