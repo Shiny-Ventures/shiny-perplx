@@ -87,7 +87,14 @@ const nextConfig = {
                 port: '',
                 pathname: '/**'
             },
-        ]
+        ],
+        unoptimized: process.env.NODE_ENV === 'production',
+    },
+    webpack: (config, { isServer }) => {
+        if (isServer) {
+            config.externals.push('_http_common');
+        }
+        return config;
     },
 };
 

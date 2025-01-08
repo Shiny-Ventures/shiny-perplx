@@ -21,7 +21,7 @@ export function UpgradePrompt({ isOpen, onClose }: UpgradePromptProps) {
         <DialogHeader>
           <DialogTitle>Daily Limit Reached</DialogTitle>
           <DialogDescription>
-            You've reached your daily limit of 3 free queries. Upgrade to our Pro plan for unlimited queries and additional features.
+            You&apos;ve reached your daily limit of 3 free queries. Upgrade to our Pro plan for unlimited queries and additional features.
           </DialogDescription>
         </DialogHeader>
         <div className="mt-6 flex justify-end space-x-4">
