@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, FolderKanban, Library, Download, ChevronLeft, ChevronRight, Plus, Sun, Moon, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Home, Compass, FolderKanban, Library, Download, ChevronLeft, ChevronRight, Plus, Sun, Moon, LogIn, LogOut, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/auth-context';
@@ -40,6 +40,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     { icon: Compass, label: 'Discover', href: '/discover' },
     { icon: FolderKanban, label: 'Spaces', href: '/spaces' },
     { icon: Library, label: 'Library', href: '/library' },
+    { icon: User, label: 'Account', href: '/account' },
   ];
 
   return (

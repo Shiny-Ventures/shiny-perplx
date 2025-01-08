@@ -23,6 +23,7 @@ export async function middleware(req: NextRequest) {
 
 // Helper function to check if a route should be protected
 function isProtectedRoute(pathname: string): boolean {
+  // Remove /account from server-side protection since it's handled client-side
   const protectedRoutes = ['/dashboard', '/settings', '/api/query']
   return protectedRoutes.some(route => pathname.startsWith(route))
 }
