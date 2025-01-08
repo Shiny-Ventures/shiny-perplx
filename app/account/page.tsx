@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, Github, Chrome, MessageSquare } from 'lucide-react';
+import { Loader2, Mail, Github, Chrome, MessageSquare, User2 } from 'lucide-react';
+import Image from 'next/image';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Helper function to get provider icon and name
 function getProviderInfo(providerId: string) {
@@ -60,6 +62,10 @@ export default function AccountPage() {
   const provider = user.app_metadata?.provider || 'email';
   const { icon: ProviderIcon, name: providerName } = getProviderInfo(provider);
   const isEmailAuth = provider === 'email';
+
+  // Get user's avatar URL from their identity data
+  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+  const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email;
 
   return (
     <div className="container max-w-4xl py-8 space-y-8">
@@ -119,9 +125,17 @@ export default function AccountPage() {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
             <div className="space-y-6">
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <p className="text-muted-foreground">{user.email}</p>
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={avatarUrl} alt={userName} />
+                  <AvatarFallback>
+                    <User2 className="h-10 w-10" />
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-medium">{userName}</h3>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </div>
               </div>
               
               <div>
