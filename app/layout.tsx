@@ -11,11 +11,11 @@ import { LayoutWithSidebar } from "@/components/core/layout-with-sidebar";
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mplx.run"),
+  metadataBase: new URL("https://shiny-perplx.vercel.app"),
   title: "ShinyPerplx",
   description: "ShinyPerplx is a minimalistic AI-powered search engine that helps you find information on the internet.",
   openGraph: {
-    url: "https://mplx.run",
+    url: "https://shiny-perplx.vercel.app",
     siteName: "ShinyPerplx",
   },
   keywords: [
@@ -31,7 +31,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo.png',
     shortcut: '/logo.png',
+    apple: '/logo.png',
   },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -43,7 +45,7 @@ export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#000" },
     { media: "(prefers-color-scheme: light)", color: "#fff" },
-  ]
+  ],
 }
 
 export default function RootLayout({
