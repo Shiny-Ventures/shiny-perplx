@@ -38,7 +38,7 @@ export function AuthForm() {
             input: theme === 'dark' ? 'dark-input' : 'light-input',
           },
         }}
-        providers={['google', 'github']}
+        providers={['google', 'discord']}
         redirectTo={redirectUrl}
         theme={theme as 'dark' | 'light'}
       />
