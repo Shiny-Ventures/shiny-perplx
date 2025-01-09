@@ -260,16 +260,43 @@ export async function POST(req: Request) {
           try {
             const exa = new Exa(serverEnv.EXA_API_KEY as string);
 
-            const result = await exa.searchAndContents(
-              query,
-              {
-                type: "keyword",
-                numResults: 10,
-                includeDomains: ["x.com", "twitter.com"],
-                text: true,
-                highlights: true
-              }
-            );
+            // Extract username if query is about a specific account
+            const usernameMatch = query.match(/@(\w+)/);
+            const isRecentAccountSearch = /recent|latest|new/i.test(query) && usernameMatch;
+            
+            let searchQuery = query;
+            if (isRecentAccountSearch && usernameMatch) {
+              // For recent account searches, modify query to focus on the account's URL and recent content
+              const username = usernameMatch[1];
+              searchQuery = `site:twitter.com/${username} OR site:x.com/${username}`;
+            }
+
+            console.log("Search query:", searchQuery);
+
+            const searchOptions = {
+              numResults: 50, // Increased further to get more potential matches
+              includeDomains: ["twitter.com", "x.com"],
+              useAutoprompt: !isRecentAccountSearch,
+              contents: {
+                text: true
+              },
+              ...(isRecentAccountSearch && {
+                sortBy: "date",
+                sortOrder: "desc",
+                startPublishedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // Last 7 days to ensure fresh results
+              })
+            };
+
+            console.log("Search options:", searchOptions);
+
+            const result = await exa.searchAndContents(searchQuery, searchOptions);
+
+            // Log raw results for debugging
+            console.log("Raw results:", result.results.map(r => ({
+              url: r.url,
+              date: r.publishedDate,
+              title: r.title
+            })));
 
             // Extract tweet ID from URL
             const extractTweetId = (url: string): string | null => {
@@ -284,11 +311,27 @@ export async function POST(req: Request) {
                 acc.push({
                   ...post,
                   tweetId,
-                  title: post.title || ""
+                  title: post.title || "",
+                  publishedDate: post.publishedDate
                 });
               }
               return acc;
             }, []);
+
+            // For account searches, ensure proper date sorting
+            if (isRecentAccountSearch) {
+              processedResults.sort((a, b) => {
+                const dateA = new Date(a.publishedDate || Date.now());
+                const dateB = new Date(b.publishedDate || Date.now());
+                return dateB.getTime() - dateA.getTime();
+              });
+
+              // Log processed results for debugging
+              console.log("Processed and sorted results:", processedResults.map(r => ({
+                url: r.url,
+                date: r.publishedDate
+              })));
+            }
 
             return processedResults;
 

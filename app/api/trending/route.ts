@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { xai } from '@ai-sdk/xai';
 
 export interface TrendingQuery {
-  icon: string;
+  icon: Category;
   text: string;
-  category: string;
+  category: Category;
 }
 
 interface RedditPost {
@@ -15,69 +15,100 @@ interface RedditPost {
   };
 }
 
+const categories = [
+  'ai',           // Artificial Intelligence topics
+  'tech',         // General technology
+  'innovation',   // New technological innovations
+  'science',      // Scientific discoveries
+  'startup',      // Tech startups and companies
+  'cybersec',     // Cybersecurity
+  'data',         // Data science and analytics
+  'robotics',     // Robotics and automation
+  'dev',          // Software development
+  'research',     // Tech research and papers
+  'skip'          // For non-tech topics
+] as const;
+
+type Category = typeof categories[number];
+
 async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
   const fetchTrends = async (geo: string): Promise<TrendingQuery[]> => {
     try {
       const response = await fetch(`https://trends.google.com/trends/trendingsearches/daily/rss?geo=${geo}`, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/rss+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        next: { revalidate: 3600 } // Cache for 1 hour
       });
 
       if (!response.ok) {
+        console.error(`Google Trends API error: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to fetch from Google Trends RSS for geo: ${geo}`);
       }
 
       const xmlText = await response.text();
-      const items = xmlText.match(/<title>(?!Daily Search Trends)(.*?)<\/title>/g) || [];
+      
+      // More robust XML parsing
+      const titleMatches = xmlText.match(/<title>(?!Daily Search Trends)([^<]+)<\/title>/g) || [];
+      const items = titleMatches.map(match => match.replace(/<\/?title>/g, '').trim());
 
-      const categories = [
-        'ai',           // Artificial Intelligence topics
-        'tech',         // General technology
-        'innovation',   // New technological innovations
-        'science',      // Scientific discoveries
-        'startup',      // Tech startups and companies
-        'cybersec',     // Cybersecurity
-        'data',         // Data science and analytics
-        'robotics',     // Robotics and automation
-        'dev',          // Software development
-        'research',     // Tech research and papers
-        'skip'          // For non-tech topics
-      ] as const;
+      if (items.length === 0) {
+        console.error('No trending items found in the RSS feed');
+        throw new Error('No trending items found');
+      }
 
       const schema = z.object({
         category: z.enum(categories),
       });
 
-      const itemsWithCategoryAndIcon = await Promise.all(items.map(async item => {
-        const { object } = await generateObject({
-          model: xai("grok-beta"),
-          prompt: `Analyze this topic and categorize it into one of these tech-focused categories (lowercase only): ${categories.join(', ')}
+      const itemsWithCategoryAndIcon = await Promise.all(
+        items.slice(0, 30).map(async item => { // Process more items initially
+          try {
+            const { object } = await generateObject({
+              model: xai("grok-beta"),
+              prompt: `Analyze this topic and categorize it into one of these tech-focused categories (lowercase only): ${categories.join(', ')}
 
-          Topic: ${item.replace(/<\/?title>/g, '')}
-          
-          Rules:
-          - Only use the exact categories listed above
-          - Focus on identifying tech and AI relevance
-          - If not clearly tech/AI related, skip this item by returning 'skip'
-          - For general tech news use 'tech'
-          - For AI-specific news use 'ai'
-          - For new tech products/services use 'innovation'`,
-          schema,
-          temperature: 0,
-        });
+              Topic: ${item}
+              
+              Rules:
+              - Only use the exact categories listed above
+              - Focus on identifying tech and AI relevance
+              - If not clearly tech/AI related, skip this item by returning 'skip'
+              - For general tech news use 'tech'
+              - For AI-specific news use 'ai'
+              - For new tech products/services use 'innovation'`,
+              schema,
+              temperature: 0,
+            });
 
-        return {
-          icon: object.category,
-          text: item.replace(/<\/?title>/g, ''),
-          category: object.category
-        };
-      }));
+            const category = object.category as Category;
+            const result: TrendingQuery = {
+              icon: category,
+              text: item,
+              category: category
+            };
+            return result;
+          } catch (error) {
+            console.error(`Failed to categorize item: ${item}`, error);
+            return null;
+          }
+        })
+      );
 
-      // Filter out non-tech topics and limit to most relevant
+      // Filter out nulls and non-tech topics
       const techItems = itemsWithCategoryAndIcon
-        .filter(item => item.category !== 'skip')
+        .filter((item): item is TrendingQuery => 
+          item !== null && 
+          item.category !== 'skip'
+        )
         .slice(0, 20);
+
+      if (techItems.length < 5) {
+        console.error('Not enough tech items found, using fallback');
+        throw new Error('Insufficient tech items');
+      }
 
       return techItems;
     } catch (error) {
@@ -86,9 +117,60 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
     }
   };
 
-  const trends = await fetchTrends("US");
+  // Try multiple regions if one fails
+  const regions = ['US', 'GB', 'CA', 'AU'];
+  for (const region of regions) {
+    const trends = await fetchTrends(region);
+    if (trends.length > 0) {
+      return trends;
+    }
+  }
 
-  return [ ...trends];
+  // If all regions fail, return tech-focused fallback queries
+  const fallbackQueries: TrendingQuery[] = [
+    {
+      icon: 'ai',
+      text: "Latest developments in artificial intelligence and machine learning",
+      category: 'ai'
+    },
+    {
+      icon: 'tech',
+      text: "Emerging technology trends and innovations",
+      category: 'tech'
+    },
+    {
+      icon: 'innovation',
+      text: "Breakthrough developments in quantum computing",
+      category: 'innovation'
+    },
+    {
+      icon: 'cybersec',
+      text: "Recent advances in cybersecurity",
+      category: 'cybersec'
+    },
+    {
+      icon: 'robotics',
+      text: "Latest robotics and automation technologies",
+      category: 'robotics'
+    },
+    {
+      icon: 'dev',
+      text: "New programming languages and development tools",
+      category: 'dev'
+    },
+    {
+      icon: 'data',
+      text: "Breakthroughs in data science and analytics",
+      category: 'data'
+    },
+    {
+      icon: 'research',
+      text: "Recent tech research papers and findings",
+      category: 'research'
+    }
+  ];
+
+  return fallbackQueries;
 }
 
 async function fetchRedditQuestions(): Promise<TrendingQuery[]> {

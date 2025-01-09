@@ -101,7 +101,8 @@ import {
   User2,
   Users,
   X,
-  YoutubeIcon
+  YoutubeIcon,
+  AlertCircle
 } from 'lucide-react';
 import Marked, { ReactRenderer } from 'marked-react';
 import { useTheme } from 'next-themes';
@@ -583,46 +584,85 @@ const HomeContent = () => {
     const initializedRef = useRef(false);
     const [selectedGroup, setSelectedGroup] = useState<SearchGroupId>('web');
 
-    // At the top with other state declarations
+    // Replace direct localStorage check with useState
+    const [hasDismissedSponsor, setHasDismissedSponsor] = useState(false);
     const [showSponsorDialog, setShowSponsorDialog] = useState(false);
-    const [hasDismissedSponsor, setHasDismissedSponsor] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('dismissedSponsor') === 'true';
-        }
-        return false;
-    });
+
+    // Move localStorage check to useEffect
+    useEffect(() => {
+        const dismissed = localStorage.getItem('dismissedSponsor') === 'true';
+        setHasDismissedSponsor(dismissed);
+    }, []);
 
     const CACHE_KEY = 'trendingQueriesCache';
     const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-    // Add this type definition
     interface TrendingQueriesCache {
         data: TrendingQuery[];
         timestamp: number;
     }
 
-    const getTrendingQueriesFromCache = (): TrendingQueriesCache | null => {
-        if (typeof window === 'undefined') return null;
+    // Move getTrendingQueriesFromCache inside useEffect where it's used
+    const [trendingQueries, setTrendingQueries] = useState<TrendingQuery[]>([]);
+    const [trendingError, setTrendingError] = useState<string | null>(null);
 
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (!cached) return null;
+    useEffect(() => {
+        const getTrendingQueriesFromCache = (): TrendingQueriesCache | null => {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (!cached) return null;
 
-        const parsedCache = JSON.parse(cached) as TrendingQueriesCache;
-        const now = Date.now();
+            const parsedCache = JSON.parse(cached) as TrendingQueriesCache;
+            const now = Date.now();
 
-        if (now - parsedCache.timestamp > CACHE_DURATION) {
-            localStorage.removeItem(CACHE_KEY);
-            return null;
-        }
+            if (now - parsedCache.timestamp > CACHE_DURATION) {
+                localStorage.removeItem(CACHE_KEY);
+                return null;
+            }
 
-        return parsedCache;
-    };
+            return parsedCache;
+        };
+
+        const fetchTrending = async () => {
+            // Check cache first
+            const cached = getTrendingQueriesFromCache();
+            if (cached) {
+                setTrendingQueries(cached.data);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/trending');
+                if (!res.ok) {
+                    throw new Error('Failed to fetch trending queries');
+                }
+                const data = await res.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('Invalid trending queries data');
+                }
+
+                // Store in cache
+                const cacheData: TrendingQueriesCache = {
+                    data,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+                setTrendingQueries(data);
+                setTrendingError(null);
+            } catch (error) {
+                console.error('Error fetching trending queries:', error);
+                setTrendingError('Failed to load trending queries');
+                setTrendingQueries([]);
+            }
+        };
+
+        fetchTrending();
+    }, []);
 
     const { theme } = useTheme();
 
     const [openChangelog, setOpenChangelog] = useState(false);
-
-    const [trendingQueries, setTrendingQueries] = useState<TrendingQuery[]>([]);
 
     const { isLoading, input, messages, setInput, append, handleSubmit, setMessages, reload, stop } = useChat({
         maxSteps: 8,
@@ -668,38 +708,6 @@ const HomeContent = () => {
             });
         }
     }, [initialState.query, append, setInput, messages.length]);
-
-    useEffect(() => {
-        const fetchTrending = async () => {
-            // Check cache first
-            const cached = getTrendingQueriesFromCache();
-            if (cached) {
-                setTrendingQueries(cached.data);
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/trending');
-                if (!res.ok) throw new Error('Failed to fetch trending queries');
-                const data = await res.json();
-
-                // Store in cache
-                const cacheData: TrendingQueriesCache = {
-                    data,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-
-                setTrendingQueries(data);
-            } catch (error) {
-                console.error('Error fetching trending queries:', error);
-                setTrendingQueries([]);
-            }
-        };
-
-        fetchTrending();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const ThemeToggle: React.FC = () => {
         const { theme, setTheme } = useTheme();
@@ -2488,7 +2496,7 @@ Grok 2 models are now available for you to try out.
                     onTouchStart={() => setIsPaused(true)}
                     onTouchEnd={() => setIsPaused(false)}
                 >
-                    {Array(20).fill(trendingQueries).flat().map((query, index) => (
+                    {trendingQueries.map((query, index) => (
                         <button
                             key={`${index}-${query.text}`}
                             onClick={() => handleExampleClick(query)}
@@ -2552,7 +2560,7 @@ Grok 2 models are now available for you to try out.
                         >
                             <Flame size={14} /> What&apos;s new
                         </Badge>
-                        <h1 className="text-4xl sm:text-6xl mb-3 text-neutral-800 dark:text-neutral-100 font-serif">Step into the future</h1>
+                        <h1 className="text-4xl sm:text-6xl mb-3 font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-neutral-900 via-neutral-800 to-neutral-900 dark:from-white dark:via-neutral-200 dark:to-neutral-400 font-serif">Step into the future</h1>
                         <div className="flex flex-row items-center gap-1 justify-center text-center mx-auto !p-0 !m-0">
                             <span className="text-base text-neutral-500 dark:text-neutral-400">
                                 Powered by

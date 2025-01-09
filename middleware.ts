@@ -4,6 +4,13 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+
+  // Skip auth check if running on localhost
+  const isLocalhost = req.url.includes('localhost') || req.url.includes('127.0.0.1')
+  if (isLocalhost) {
+    return res
+  }
+
   const supabase = createMiddlewareClient({ req, res })
 
   const {

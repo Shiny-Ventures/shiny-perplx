@@ -2,18 +2,32 @@
 
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const [isLocalhost, setIsLocalhost] = useState(false)
 
   useEffect(() => {
+    // Check if running on localhost
+    setIsLocalhost(
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1'
+    )
+  }, [])
+
+  useEffect(() => {
+    // Skip auth check if running on localhost
+    if (isLocalhost) {
+      return;
+    }
+
     if (!loading && !user) {
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [user, loading, router, isLocalhost])
 
   if (loading) {
     return (
@@ -26,7 +40,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user) {
+  // Allow access on localhost even without user
+  if (!user && !isLocalhost) {
     return null
   }
 
