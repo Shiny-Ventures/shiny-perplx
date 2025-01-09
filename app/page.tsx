@@ -102,7 +102,16 @@ import {
   Users,
   X,
   YoutubeIcon,
-  AlertCircle
+  AlertCircle,
+  Cpu,
+  Lightbulb,
+  Rocket,
+  Shield,
+  Database,
+  Bot,
+  Code2,
+  Microscope,
+  Atom
 } from 'lucide-react';
 import Marked, { ReactRenderer } from 'marked-react';
 import { useTheme } from 'next-themes';
@@ -2417,7 +2426,7 @@ Grok 2 models are now available for you to try out.
 
             const startScrolling = () => {
                 if (!scrollRef.current || isPaused) return;
-                scrollRef.current.scrollLeft += 1; // Reduced speed
+                scrollRef.current.scrollLeft += 1; // Back to 1 for smoothness
 
                 // Reset scroll when reaching end
                 if (scrollRef.current.scrollLeft >=
@@ -2426,7 +2435,7 @@ Grok 2 models are now available for you to try out.
                 }
             };
 
-            scrollIntervalRef.current = setInterval(startScrolling, 30);
+            scrollIntervalRef.current = setInterval(startScrolling, 20); // Reduced from 30ms to 20ms
 
             return () => {
                 if (scrollIntervalRef.current) {
@@ -2468,16 +2477,16 @@ Grok 2 models are now available for you to try out.
 
         const getIconForCategory = (category: string) => {
             const iconMap = {
-                trending: <TrendingUp className="w-5 h-5" />,
-                community: <Users className="w-5 h-5" />,
-                science: <Brain className="w-5 h-5" />,
-                tech: <Code className="w-5 h-5" />,
-                travel: <Globe className="w-5 h-5" />,
-                politics: <Flag className="w-5 h-5" />,
-                health: <Heart className="w-5 h-5" />,
-                sports: <TennisBall className="w-5 h-5" />,
-                finance: <CurrencyDollar className="w-5 h-5" />,
-                football: <SoccerBall className="w-5 h-5" />,
+                ai: <Brain className="w-5 h-5" />,
+                tech: <Cpu className="w-5 h-5" />,
+                innovation: <Lightbulb className="w-5 h-5" />,
+                science: <Atom className="w-5 h-5" />,
+                startup: <Rocket className="w-5 h-5" />,
+                cybersec: <Shield className="w-5 h-5" />,
+                data: <Database className="w-5 h-5" />,
+                robotics: <Bot className="w-5 h-5" />,
+                dev: <Code2 className="w-5 h-5" />,
+                research: <Microscope className="w-5 h-5" />
             };
             return iconMap[category as keyof typeof iconMap] || <Sparkles className="w-5 h-5" />;
         };
@@ -2517,7 +2526,7 @@ Grok 2 models are now available for you to try out.
                                     {getIconForCategory(query.category)}
                                 </span>
                                 <span
-                                    className="text-sm font-medium truncate max-w-[180px] group-hover:text-neutral-900 dark:group-hover:text-neutral-100"
+                                    className="text-sm font-medium truncate max-w-[300px] group-hover:text-neutral-900 dark:group-hover:text-neutral-100"
                                 >
                                     {query.text}
                                 </span>

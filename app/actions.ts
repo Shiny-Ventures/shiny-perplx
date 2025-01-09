@@ -128,6 +128,7 @@ const groupPrompts = {
   Your goals:
   - Stay concious and aware of the guidelines.
   - Provide accurate, concise, and well-formatted responses.
+  - You are techno-optimistic by default.
   - Avoid hallucinations or fabrications. Stick to verified facts and provide proper citations.
   - Follow formatting guidelines strictly.
 

@@ -130,42 +130,82 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
   const fallbackQueries: TrendingQuery[] = [
     {
       icon: 'ai',
-      text: "Latest developments in artificial intelligence and machine learning",
+      text: "Latest developments in GPT-4 and large language models",
+      category: 'ai'
+    },
+    {
+      icon: 'ai',
+      text: "Emerging AI tools for personalized education",
       category: 'ai'
     },
     {
       icon: 'tech',
-      text: "Emerging technology trends and innovations",
+      text: "Breakthrough in quantum computing research",
+      category: 'tech'
+    },
+    {
+      icon: 'tech',
+      text: "The future of 6G networks and connectivity",
       category: 'tech'
     },
     {
       icon: 'innovation',
-      text: "Breakthrough developments in quantum computing",
+      text: "New advancements in autonomous vehicles",
+      category: 'innovation'
+    },
+    {
+      icon: 'innovation',
+      text: "Revolutionary energy storage technologies",
       category: 'innovation'
     },
     {
       icon: 'cybersec',
-      text: "Recent advances in cybersecurity",
+      text: "Breakthroughs in quantum-proof cryptography",
+      category: 'cybersec'
+    },
+    {
+      icon: 'cybersec',
+      text: "How AI is reshaping threat detection",
       category: 'cybersec'
     },
     {
       icon: 'robotics',
-      text: "Latest robotics and automation technologies",
+      text: "Innovations in humanoid robots",
       category: 'robotics'
     },
     {
-      icon: 'dev',
-      text: "New programming languages and development tools",
-      category: 'dev'
+      icon: 'robotics',
+      text: "Advancements in collaborative industrial robots",
+      category: 'robotics'
     },
     {
       icon: 'data',
-      text: "Breakthroughs in data science and analytics",
+      text: "Trends in big data analytics for business intelligence",
       category: 'data'
     },
     {
+      icon: 'data',
+      text: "The rise of synthetic data in AI model training",
+      category: 'data'
+    },
+    {
+      icon: 'dev',
+      text: "Best practices for building AI-powered applications",
+      category: 'dev'
+    },
+    {
+      icon: 'dev',
+      text: "The future of serverless computing in app development",
+      category: 'dev'
+    },
+    {
       icon: 'research',
-      text: "Recent tech research papers and findings",
+      text: "The latest breakthroughs in superconductivity research",
+      category: 'research'
+    },
+    {
+      icon: 'research',
+      text: "Innovative uses of AI in scientific experimentation",
       category: 'research'
     }
   ];
@@ -230,8 +270,18 @@ export async function GET(req: Request) {
           category: 'ai'
         },
         {
+          icon: 'ai',
+          text: "Emerging AI tools for personalized education",
+          category: 'ai'
+        },
+        {
           icon: 'tech',
           text: "Breakthrough in quantum computing research",
+          category: 'tech'
+        },
+        {
+          icon: 'tech',
+          text: "The future of 6G networks and connectivity",
           category: 'tech'
         },
         {
@@ -240,14 +290,79 @@ export async function GET(req: Request) {
           category: 'innovation'
         },
         {
+          icon: 'innovation',
+          text: "Revolutionary energy storage technologies",
+          category: 'innovation'
+        },
+        {
+          icon: 'science',
+          text: "Discoveries in gene editing and synthetic biology",
+          category: 'science'
+        },
+        {
+          icon: 'science',
+          text: "Progress in understanding dark matter",
+          category: 'science'
+        },
+        {
+          icon: 'startup',
+          text: "Top startups revolutionizing clean energy",
+          category: 'startup'
+        },
+        {
+          icon: 'startup',
+          text: "AI-driven companies transforming retail",
+          category: 'startup'
+        },
+        {
           icon: 'cybersec',
-          text: "Latest trends in AI cybersecurity",
+          text: "Breakthroughs in quantum-proof cryptography",
           category: 'cybersec'
+        },
+        {
+          icon: 'cybersec',
+          text: "How AI is reshaping threat detection",
+          category: 'cybersec'
+        },
+        {
+          icon: 'data',
+          text: "Trends in big data analytics for business intelligence",
+          category: 'data'
+        },
+        {
+          icon: 'data',
+          text: "The rise of synthetic data in AI model training",
+          category: 'data'
         },
         {
           icon: 'robotics',
           text: "Innovations in humanoid robots",
           category: 'robotics'
+        },
+        {
+          icon: 'robotics',
+          text: "Advancements in collaborative industrial robots",
+          category: 'robotics'
+        },
+        {
+          icon: 'dev',
+          text: "Best practices for building AI-powered applications",
+          category: 'dev'
+        },
+        {
+          icon: 'dev',
+          text: "The future of serverless computing in app development",
+          category: 'dev'
+        },
+        {
+          icon: 'research',
+          text: "The latest breakthroughs in superconductivity research",
+          category: 'research'
+        },
+        {
+          icon: 'research',
+          text: "Innovative uses of AI in scientific experimentation",
+          category: 'research'
         }
       ]);
     }
