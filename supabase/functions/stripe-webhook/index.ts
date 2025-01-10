@@ -22,6 +22,13 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+const relevantEvents = new Set([
+  'checkout.session.completed',
+  'customer.subscription.created', 
+  'customer.subscription.updated',
+  'customer.subscription.deleted'
+]);
+
 serve(async (req: Request) => {
   try {
     const signature = req.headers.get('stripe-signature')
@@ -36,6 +43,13 @@ serve(async (req: Request) => {
 
     const body = await req.text()
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+
+    if (!relevantEvents.has(event.type)) {
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
 
     switch (event.type) {
       case 'customer.subscription.created':
