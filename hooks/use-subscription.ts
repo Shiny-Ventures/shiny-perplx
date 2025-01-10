@@ -32,14 +32,14 @@ export function useSubscription() {
       return
     }
 
+    const currentUserId = user.id
+
     async function fetchSubscription() {
       try {
-        const userId = user.id
-        
         const { data, error } = await supabase
           .from('subscriptions')
           .select('tier, status')
-          .eq('user_id', userId)
+          .eq('user_id', currentUserId)
           .maybeSingle()
 
         if (!isMounted) return
