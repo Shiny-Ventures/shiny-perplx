@@ -10,7 +10,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: Request) {
   const body = await request.text()
-  const signature = headers().get('stripe-signature')!
+  const headersList = headers()
+  const signature = headersList.get('stripe-signature')
+
+  if (!signature) {
+    return NextResponse.json(
+      { error: 'No signature found' },
+      { status: 400 }
+    )
+  }
 
   try {
     const event = stripe.webhooks.constructEvent(
@@ -53,6 +61,7 @@ export async function POST(request: Request) {
   }
 }
 
+// This is important for Stripe webhooks
 export const config = {
   api: {
     bodyParser: false,
