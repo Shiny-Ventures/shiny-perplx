@@ -6,18 +6,21 @@ import { cookies } from 'next/headers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
+  typescript: true,
 })
 
 const relevantEvents = new Set([
   'checkout.session.completed',
   'customer.subscription.created',
   'customer.subscription.updated',
-  'customer.subscription.deleted'
+  'customer.subscription.deleted',
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed'
 ]);
 
 export async function POST(request: Request) {
   const body = await request.text()
-  const headersList = await headers()
+  const headersList = headers()
   const signature = headersList.get('stripe-signature')
 
   if (!signature) {
@@ -90,6 +93,28 @@ export async function POST(request: Request) {
           })
           .eq('stripe_subscription_id', subscription.id)
         break
+      }
+
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        // Update subscription status if needed
+        if (paymentIntent.metadata.subscriptionId) {
+          await supabase
+            .from('subscriptions')
+            .update({ 
+              status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('stripe_subscription_id', paymentIntent.metadata.subscriptionId);
+        }
+        break;
+      }
+
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        // Handle failed payment if needed
+        console.error('Payment failed:', paymentIntent.id);
+        break;
       }
     }
 

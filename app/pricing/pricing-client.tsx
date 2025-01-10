@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { Switch } from '@/components/ui/switch'
+import { loadStripe } from '@stripe/stripe-js'
+import { Loader2 } from 'lucide-react'
 
 interface PricingClientProps {
   monthlyPriceId: string
@@ -19,6 +21,7 @@ export function PricingClient({ monthlyPriceId, yearlyPriceId }: PricingClientPr
   const { user } = useAuth()
   const router = useRouter()
   const [isYearly, setIsYearly] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleUpgrade = async (priceId: string) => {
     if (!user) {
@@ -27,8 +30,11 @@ export function PricingClient({ monthlyPriceId, yearlyPriceId }: PricingClientPr
       return
     }
 
+    setIsLoading(true)
+
     try {
-      const response = await fetch('/api/stripe/create-checkout', {
+      // First try to create a subscription
+      const subscriptionResponse = await fetch('/api/stripe/create-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,21 +45,56 @@ export function PricingClient({ monthlyPriceId, yearlyPriceId }: PricingClientPr
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to start checkout process')
-      }
+      if (subscriptionResponse.ok) {
+        // If successful, get the client secret and redirect to checkout
+        const { clientSecret } = await subscriptionResponse.json()
+        
+        // Initialize Stripe
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+        
+        if (!stripe) {
+          throw new Error('Failed to load Stripe')
+        }
 
-      const data = await response.json()
-      
-      if (data.url) {
-        window.location.href = data.url
+        // Redirect to Stripe's hosted payment page
+        const { error } = await stripe.confirmCardPayment(clientSecret)
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        // On successful payment, redirect to success page
+        router.push('/payment/success')
       } else {
-        throw new Error('No checkout URL received')
+        // If subscription creation fails, fall back to checkout session
+        const checkoutResponse = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            priceId,
+          }),
+        })
+
+        if (!checkoutResponse.ok) {
+          const errorData = await checkoutResponse.json()
+          throw new Error(errorData.error || 'Failed to start checkout process')
+        }
+
+        const data = await checkoutResponse.json()
+        
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          throw new Error('No checkout URL received')
+        }
       }
     } catch (error) {
       console.error('Error starting checkout:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to start checkout process')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -148,9 +189,16 @@ export function PricingClient({ monthlyPriceId, yearlyPriceId }: PricingClientPr
               className="mt-8" 
               variant="default"
               onClick={() => handleUpgrade(isYearly ? yearlyPriceId : monthlyPriceId)}
-              disabled={tier === 'pro'}
+              disabled={isLoading}
             >
-              {tier === 'pro' ? 'Current Plan' : 'Upgrade to Pro'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                tier === 'pro' ? 'Current Plan' : 'Upgrade to Pro'
+              )}
             </Button>
           </div>
         </Card>

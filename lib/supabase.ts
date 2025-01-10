@@ -1,9 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Use environment variables directly
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+// Client for public usage
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Admin client for server-side operations
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
 
 // Helper function to check if user has exceeded free tier limit
 export async function hasExceededDailyLimit(userId: string): Promise<boolean> {

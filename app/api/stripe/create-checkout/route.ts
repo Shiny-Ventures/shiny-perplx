@@ -5,37 +5,26 @@ import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
+  typescript: true,
 })
 
 export async function POST(request: Request) {
   try {
-    // Create a new cookie store for each request
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
-    // Get the session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (sessionError) {
-      console.error('Session error:', sessionError)
-      return NextResponse.json(
-        { error: 'Session error' },
-        { status: 401 }
-      )
-    }
-
-    if (!session?.user) {
-      console.error('No session found')
+    if (sessionError || !session?.user) {
+      console.error('Session error:', sessionError || 'No session found')
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
-    // Get the price ID from the request body
     const { priceId } = await request.json()
 
-    // Create the checkout session
     const checkoutSession = await stripe.checkout.sessions.create({
       customer_email: session.user.email,
       mode: 'subscription',
