@@ -7,6 +7,17 @@ import { useEffect, useState } from 'react'
 export type SubscriptionTier = 'free' | 'pro'
 export type SubscriptionStatus = 'active' | 'trialing' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'unpaid'
 
+interface Subscription {
+  id: string
+  user_id: string
+  stripe_customer_id: string
+  stripe_subscription_id: string
+  tier: string
+  status: SubscriptionStatus
+  created_at: string
+  updated_at: string
+}
+
 export function useSubscription() {
   const { user } = useAuth()
   const [tier, setTier] = useState<SubscriptionTier>('free')
@@ -25,7 +36,7 @@ export function useSubscription() {
       try {
         const { data, error } = await supabase
           .from('subscriptions')
-          .select('status')
+          .select('tier, status')
           .eq('user_id', user.id)
           .maybeSingle()
 
@@ -42,8 +53,17 @@ export function useSubscription() {
           return
         }
 
-        const status = data.status as SubscriptionStatus
-        setTier(['active', 'trialing'].includes(status) ? 'pro' : 'free')
+        // Ensure we're using the correct tier from the database
+        const subscriptionTier = data.tier as SubscriptionTier
+        const subscriptionStatus = data.status as SubscriptionStatus
+
+        // Only set as pro if both tier is 'pro' and status is active/trialing
+        setTier(
+          subscriptionTier === 'pro' && 
+          ['active', 'trialing'].includes(subscriptionStatus) 
+            ? 'pro' 
+            : 'free'
+        )
       } catch (error) {
         if (!isMounted) return
         console.error('Error fetching subscription:', error)
