@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Mail, Github, Chrome, MessageSquare, User2 } from 'lucide-react';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import Link from 'next/link';
 
 // Helper function to get provider icon and name
 function getProviderInfo(providerId: string) {
@@ -110,11 +111,14 @@ export default function AccountPage() {
                     ) : (
                       'Manage Subscription'
                     )}
-                  </Button>
+                  </Button> // replace with onClick={handleUpgrade} to add back in the full Stripe checkout
                 ) : (
-                  <Button onClick={handleUpgrade}>
+                  <Link
+                    href="https://buy.stripe.com/fZe7vc5Rzcyx9Tq6ox"
+                    className="inline-flex items-center justify-center rounded-md bg-[#333] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#444]"
+                  >
                     Upgrade to Pro
-                  </Button>
+                  </Link>
                 )}
               </>
             )}
