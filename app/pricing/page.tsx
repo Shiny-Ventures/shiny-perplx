@@ -28,6 +28,7 @@ export default function PricingPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           priceId,
         }),
@@ -36,7 +37,7 @@ export default function PricingPage() {
       const data = await response.json()
 
       if (data.error) {
-        toast.error('Failed to start checkout process')
+        toast.error(data.error || 'Failed to start checkout process')
         return
       }
 

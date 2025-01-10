@@ -22,14 +22,14 @@ export function useSubscription() {
       try {
         const { data, error } = await supabase
           .from('subscriptions')
-          .select('tier')
-          .eq('user_id', user!.id)
+          .select('status')
+          .eq('user_id', user.id)
           .single()
 
         if (error || !data) {
           setTier('free')
         } else {
-          setTier(data.tier as SubscriptionTier)
+          setTier(data.status === 'active' ? 'pro' : 'free')
         }
       } catch (error) {
         console.error('Error fetching subscription:', error)
