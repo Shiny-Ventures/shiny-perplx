@@ -1,135 +1,179 @@
-import { headers } from 'next/headers'
-import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase-server'
+import { Readable } from 'stream'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-  typescript: true,
-})
+async function readRequestBodyAsBuffer(request: Request) {
+  const reader = request.body?.getReader()
+  if (!reader) return Buffer.from('')
 
-const relevantEvents = new Set([
-  'checkout.session.completed',
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'payment_intent.succeeded',
-  'payment_intent.payment_failed'
-]);
-
-export async function POST(request: Request) {
-  const body = await request.text()
-  const headersList = headers()
-  const signature = headersList.get('stripe-signature')
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: 'No signature found' },
-      { status: 400 }
-    )
+  const chunks: Uint8Array[] = []
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (value) chunks.push(value)
   }
-
-  try {
-    const event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    )
-
-    // Check if we should handle this event
-    if (!relevantEvents.has(event.type)) {
-      return NextResponse.json({ received: true })
-    }
-
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        
-        if (!session?.metadata?.userId) {
-          throw new Error('No user ID in session metadata')
-        }
-
-        await supabase
-          .from('subscriptions')
-          .upsert({
-            user_id: session.metadata.userId,
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: session.subscription as string,
-            tier: 'pro',
-            status: 'active',
-          })
-        break
-      }
-
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        
-        await supabase
-          .from('subscriptions')
-          .upsert({
-            stripe_subscription_id: subscription.id,
-            stripe_customer_id: subscription.customer as string,
-            status: subscription.status,
-            tier: 'pro',
-            // Get user_id from existing record if this is an update
-            user_id: subscription.metadata.userId,
-          })
-        break
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        
-        await supabase
-          .from('subscriptions')
-          .update({ 
-            status: 'canceled',
-            updated_at: new Date().toISOString()
-          })
-          .eq('stripe_subscription_id', subscription.id)
-        break
-      }
-
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        // Update subscription status if needed
-        if (paymentIntent.metadata.subscriptionId) {
-          await supabase
-            .from('subscriptions')
-            .update({ 
-              status: 'active',
-              updated_at: new Date().toISOString()
-            })
-            .eq('stripe_subscription_id', paymentIntent.metadata.subscriptionId);
-        }
-        break;
-      }
-
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        // Handle failed payment if needed
-        console.error('Payment failed:', paymentIntent.id);
-        break;
-      }
-    }
-
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook error:', error)
-    return NextResponse.json(
-      { error: 'Webhook handler failed' },
-      { status: 400 }
-    )
-  }
+  return Buffer.concat(chunks)
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
+export async function POST(request: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+    apiVersion: '2023-10-16',
+  })
+
+  let event: Stripe.Event
+
+  try {
+    const buf = await readRequestBodyAsBuffer(request)
+    const signature = request.headers.get('stripe-signature') || ''
+
+    // 1) Construct the event (verify signature)
+    event = stripe.webhooks.constructEvent(
+      buf,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET as string
+    )
+  } catch (err: any) {
+    console.error('Webhook signature verification failed.', err)
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+  }
+
+  // 2) Handle the event type
+  switch (event.type) {
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object as Stripe.Invoice
+      // e.g. invoice.customer is the Stripe customer ID: invoice.customer
+      // Update your Supabase row with subscription status
+      // ...
+      break
+    }
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription
+      // Possibly update subscription status in Supabase
+      // ...
+      break
+    }
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription;
+      // 1) This is the stripe customer ID
+      const customerId = subscription.customer as string;
+      const status = subscription.status; // e.g. 'active', 'trialing', etc.
+
+      try {
+        // 2) Look up the local user row that matches this stripe_customer_id
+        const { data: userSubscription, error } = await supabaseAdmin
+          .from('subscriptions')
+          .select('user_id')
+          .eq('stripe_customer_id', customerId)
+          .single();
+
+        if (error) throw new Error(error.message);
+
+        if (userSubscription) {
+          // 3) Decide the new tier
+          //    (If you only have 'pro' vs 'free', you can mark 'pro' if status === 'active')
+          const newTier = status === 'active' || status === 'trialing' ? 'pro' : 'free';
+
+          // 4) Update the subscription row accordingly
+          const { error: updateError } = await supabaseAdmin
+            .from('subscriptions')
+            .update({
+              tier: newTier,
+              status: status, // e.g. 'active', 'trialing', 'canceled', etc.
+              stripe_subscription_id: subscription.id,
+            })
+            .eq('stripe_customer_id', customerId);
+
+          if (updateError) {
+            console.error('Error updating subscription row:', updateError);
+          }
+        }
+      } catch (err) {
+        console.error('Error handling subscription update:', err);
+      }
+      break;
+    }
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      // The session contains subscription/customer IDs that we can use.
+      const subscriptionId = session.subscription as string;
+      const customerId = session.customer as string;
+      const userId = session?.metadata?.supabaseUserId; // Or however the user ID is set in metadata
+
+      try {
+        // If needed, create or update the subscription row in your DB
+        const { error: upsertError } = await supabaseAdmin
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            tier: 'pro', // or logic to figure out the correct tier
+            status: 'active',
+          })
+          .eq('stripe_customer_id', customerId) // upsert by stripe_customer_id
+
+        if (upsertError) {
+          console.error('Error upserting subscription row:', upsertError);
+        }
+      } catch (err) {
+        console.error('Error handling checkout.session.completed:', err);
+      }
+      break;
+    }
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as Stripe.Subscription;
+      const customerId = subscription.customer as string;
+
+      try {
+        // Mark subscription as canceled
+        const { error: cancelError } = await supabaseAdmin
+          .from('subscriptions')
+          .update({
+            status: 'canceled',
+            tier: 'free',
+          })
+          .eq('stripe_subscription_id', subscription.id);
+
+        if (cancelError) {
+          console.error('Error canceling subscription:', cancelError);
+        }
+      } catch (err) {
+        console.error('Error handling subscription deletion:', err);
+      }
+      break;
+    }
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const subscriptionId = paymentIntent.metadata?.subscriptionId; // or however you track it
+
+      if (subscriptionId) {
+        try {
+          // Mark subscription as active
+          const { error: updateError } = await supabaseAdmin
+            .from('subscriptions')
+            .update({
+              status: 'active',
+            })
+            .eq('stripe_subscription_id', subscriptionId);
+
+          if (updateError) {
+            console.error('Error updating subscription status:', updateError);
+          }
+        } catch (err) {
+          console.error('Error handling payment_intent.succeeded:', err);
+        }
+      } else {
+        console.log('No subscriptionId metadata found on payment intent');
+      }
+      break;
+    }
+    // ... handle other events ...
+    default:
+      console.log(`Unhandled event type ${event.type}`)
+  }
+
+  return NextResponse.json({ received: true }, { status: 200 })
 } 

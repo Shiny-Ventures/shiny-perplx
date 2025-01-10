@@ -1,26 +1,26 @@
 import { createClient } from '@supabase/supabase-js'
-
-// Use environment variables directly
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// Client for public usage
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { clientEnv } from '@/env/client'
+import { serverEnv } from '@/env/server'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 // Admin client for server-side operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+export const supabaseAdmin = createClient(
+  clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+  serverEnv.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
   }
-})
+)
 
-// Helper function to check if user has exceeded free tier limit
+// Helper functions that use supabaseAdmin
 export async function hasExceededDailyLimit(userId: string): Promise<boolean> {
   try {
     // First check if user has an active pro subscription
-    const { data: subscription } = await supabase
+    const { data: subscription } = await supabaseAdmin
       .from('subscriptions')
       .select('tier, status')
       .eq('user_id', userId)
@@ -35,7 +35,7 @@ export async function hasExceededDailyLimit(userId: string): Promise<boolean> {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const { data: queries, error } = await supabase
+    const { data: queries, error } = await supabaseAdmin
       .from('user_queries')
       .select('*')
       .eq('user_id', userId)
@@ -53,9 +53,8 @@ export async function hasExceededDailyLimit(userId: string): Promise<boolean> {
   }
 }
 
-// Helper function to track a new query
 export async function trackQuery(userId: string, queryDetails: any) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('user_queries')
     .insert([
       {
@@ -67,4 +66,9 @@ export async function trackQuery(userId: string, queryDetails: any) {
   if (error) {
     console.error('Error tracking query:', error)
   }
+}
+
+// If you use server components, you might follow the pattern below:
+export function createSupabaseServerClient() {
+  return createServerComponentClient({ cookies })
 } 

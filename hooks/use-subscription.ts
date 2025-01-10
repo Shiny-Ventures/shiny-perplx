@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth-context'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase-client'
 import { useEffect, useState } from 'react'
 
 export type SubscriptionTier = 'free' | 'pro'
