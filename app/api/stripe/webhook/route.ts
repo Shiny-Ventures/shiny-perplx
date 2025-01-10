@@ -8,6 +8,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
 })
 
+const relevantEvents = new Set([
+  'checkout.session.completed',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted'
+]);
+
 export async function POST(request: Request) {
   const body = await request.text()
   const headersList = await headers()
@@ -26,6 +33,11 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
+
+    // Check if we should handle this event
+    if (!relevantEvents.has(event.type)) {
+      return NextResponse.json({ received: true })
+    }
 
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
@@ -49,6 +61,36 @@ export async function POST(request: Request) {
           })
         break
       }
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription
+        
+        await supabase
+          .from('subscriptions')
+          .upsert({
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            status: subscription.status,
+            tier: 'pro',
+            // Get user_id from existing record if this is an update
+            user_id: subscription.metadata.userId,
+          })
+        break
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription
+        
+        await supabase
+          .from('subscriptions')
+          .update({ 
+            status: 'canceled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('stripe_subscription_id', subscription.id)
+        break
+      }
     }
 
     return NextResponse.json({ received: true })
@@ -61,7 +103,6 @@ export async function POST(request: Request) {
   }
 }
 
-// This is important for Stripe webhooks
 export const config = {
   api: {
     bodyParser: false,
