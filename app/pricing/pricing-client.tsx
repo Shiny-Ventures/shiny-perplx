@@ -39,18 +39,21 @@ export function PricingClient({ monthlyPriceId, yearlyPriceId }: PricingClientPr
         }),
       })
 
-      const data = await response.json()
-
-      if (data.error) {
-        toast.error(data.error || 'Failed to start checkout process')
-        return
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start checkout process')
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = data.url
+      const data = await response.json()
+      
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL received')
+      }
     } catch (error) {
       console.error('Error starting checkout:', error)
-      toast.error('Failed to start checkout process')
+      toast.error(error instanceof Error ? error.message : 'Failed to start checkout process')
     }
   }
 

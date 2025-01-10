@@ -1,93 +1,60 @@
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
 })
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function POST(request: Request) {
   const body = await request.text()
-  const headersList = await headers()
-  const signature = headersList.get('stripe-signature')!
-
-  let event: Stripe.Event
+  const signature = headers().get('stripe-signature')!
 
   try {
-    event = stripe.webhooks.constructEvent(
+    const event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
-  } catch (error) {
-    console.error('Error verifying webhook signature:', error)
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 400 }
-    )
-  }
 
-  try {
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        const userId = session.metadata?.userId
-
-        if (userId) {
-          // Update user's subscription in Supabase
-          await supabase
-            .from('subscriptions')
-            .upsert({
-              user_id: userId,
-              stripe_customer_id: session.customer as string,
-              stripe_subscription_id: session.subscription as string,
-              tier: 'pro',
-              status: 'active',
-            })
+        
+        if (!session?.metadata?.userId) {
+          throw new Error('No user ID in session metadata')
         }
-        break
-      }
 
-      case 'customer.subscription.deleted':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        const stripeCustomerId = subscription.customer as string
-
-        // Find user by Stripe customer ID
-        const { data: subscriptionData } = await supabase
+        await supabase
           .from('subscriptions')
-          .select('user_id')
-          .eq('stripe_customer_id', stripeCustomerId)
-          .single()
-
-        if (subscriptionData) {
-          // Update subscription status
-          await supabase
-            .from('subscriptions')
-            .upsert({
-              user_id: subscriptionData.user_id,
-              stripe_customer_id: stripeCustomerId,
-              stripe_subscription_id: subscription.id,
-              tier: subscription.status === 'active' ? 'pro' : 'free',
-              status: subscription.status,
-            })
-        }
+          .upsert({
+            user_id: session.metadata.userId,
+            stripe_customer_id: session.customer as string,
+            stripe_subscription_id: session.subscription as string,
+            tier: 'pro',
+            status: 'active',
+          })
         break
       }
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    console.error('Webhook error:', error)
     return NextResponse.json(
       { error: 'Webhook handler failed' },
-      { status: 500 }
+      { status: 400 }
     )
   }
+}
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
 } 
