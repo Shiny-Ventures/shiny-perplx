@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 
 export type SubscriptionTier = 'free' | 'pro'
+export type SubscriptionStatus = 'active' | 'trialing' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'unpaid'
 
 export function useSubscription() {
   const { user } = useAuth()
@@ -12,6 +13,8 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+
     if (!user?.id) {
       setTier('free')
       setLoading(false)
@@ -24,22 +27,39 @@ export function useSubscription() {
           .from('subscriptions')
           .select('status')
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
-        if (error || !data) {
+        if (!isMounted) return
+
+        if (error) {
+          console.error('Error fetching subscription:', error)
           setTier('free')
-        } else {
-          setTier(data.status === 'active' ? 'pro' : 'free')
+          return
         }
+
+        if (!data) {
+          setTier('free')
+          return
+        }
+
+        const status = data.status as SubscriptionStatus
+        setTier(['active', 'trialing'].includes(status) ? 'pro' : 'free')
       } catch (error) {
+        if (!isMounted) return
         console.error('Error fetching subscription:', error)
         setTier('free')
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchSubscription()
+
+    return () => {
+      isMounted = false
+    }
   }, [user?.id])
 
   return {
