@@ -12,16 +12,18 @@ const YEARLY_PRICE_ID = process.env.STRIPE_PRO_YEARLY_PRICE_ID!
 
 export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     const { data: { session } } = await supabase.auth.getSession()
-    const { priceId } = await request.json()
-
-    if (!session) {
+    
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
+
+    const { priceId } = await request.json()
 
     // Validate price ID
     if (priceId !== MONTHLY_PRICE_ID && priceId !== YEARLY_PRICE_ID) {
