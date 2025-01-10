@@ -12,7 +12,7 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.id) {
       setTier('free')
       setLoading(false)
       return
@@ -40,7 +40,7 @@ export function useSubscription() {
     }
 
     fetchSubscription()
-  }, [user])
+  }, [user?.id])
 
   return {
     tier,
