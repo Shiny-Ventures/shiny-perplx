@@ -30,7 +30,8 @@ type SearchResult = {
 type SearchQueryResult = {
     query: string;
     results: SearchResult[];
-    images: SearchImage[];
+    // Commented out for future reference
+    // images: SearchImage[];
 };
 
 type MultiSearchResponse = {
@@ -57,7 +58,8 @@ interface GalleryProps {
 interface SearchResultsProps {
     searchData: SearchQueryResult;
     topicType: string;
-    onImageClick: (index: number) => void;
+    // Commented out for future reference
+    // onImageClick: (index: number) => void;
 }
 
 const SearchQueryTab: React.FC<{ query: string; count: number; isActive: boolean }> = ({ query, count, isActive }) => (
@@ -192,7 +194,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ searchData, topicType, on
             </AccordionItem>
         </Accordion>
 
-        {/* Original Image Results Section */}
+        {/* Commented out Image Results Section for future reference
         {searchData.images.length > 0 && (
             <div className="dark:bg-neutral-900 bg-white rounded-xl dark:border-neutral-800 border-gray-200 border">
                 <div className="p-4 border-b dark:border-neutral-800 border-gray-200">
@@ -204,6 +206,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ searchData, topicType, on
                 <ImageGrid images={searchData.images} onImageClick={onImageClick} />
             </div>
         )}
+        */}
     </div>
 );
 

@@ -15,18 +15,15 @@ interface RedditPost {
   };
 }
 
+// First, ensure the categories are strictly defined
 const categories = [
-  'ai',           // Artificial Intelligence topics
-  'tech',         // General technology
-  'innovation',   // New technological innovations
-  'science',      // Scientific discoveries
-  'startup',      // Tech startups and companies
-  'cybersec',     // Cybersecurity
-  'data',         // Data science and analytics
-  'robotics',     // Robotics and automation
-  'dev',          // Software development
-  'research',     // Tech research and papers
-  'skip'          // For non-tech topics
+  'curated',
+  'ai',
+  'tech',
+  'innovation',
+  'robotics',
+  'research',
+  'skip'  // Keep skip for non-relevant content
 ] as const;
 
 type Category = typeof categories[number];
@@ -64,21 +61,30 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
       });
 
       const itemsWithCategoryAndIcon = await Promise.all(
-        items.slice(0, 30).map(async item => { // Process more items initially
+        items.slice(0, 50).map(async item => { // Increased from 30 to 50 items
           try {
             const { object } = await generateObject({
               model: xai("grok-beta"),
-              prompt: `Analyze this topic and categorize it into one of these tech-focused categories (lowercase only): ${categories.join(', ')}
+              prompt: `Analyze this topic and categorize it into one of these specific tech categories (lowercase only): ${categories.join(', ')}
 
               Topic: ${item}
               
               Rules:
               - Only use the exact categories listed above
-              - Focus on identifying tech and AI relevance
-              - If not clearly tech/AI related, skip this item by returning 'skip'
-              - For general tech news use 'tech'
+              - Focus on identifying cutting-edge tech and AI relevance
+              - For curated content, it must be high-quality tech news from reputable sources
               - For AI-specific news use 'ai'
-              - For new tech products/services use 'innovation'`,
+              - For robotics and automation use 'robotics'
+              - For research papers and scientific breakthroughs use 'research'
+              - For new tech products/innovations use 'innovation'
+              - For general tech news use 'tech'
+              - If not clearly tech/AI related, use 'skip'
+              
+              Additional Context:
+              - 'curated' is for high-impact tech news and developments
+              - 'innovation' covers new products, services, and technological breakthroughs
+              - 'research' includes academic papers, studies, and scientific discoveries
+              - 'robotics' covers automation, drones, and physical AI systems`,
               schema,
               temperature: 0,
             });
@@ -103,7 +109,7 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
           item !== null && 
           item.category !== 'skip'
         )
-        .slice(0, 20);
+        .slice(0, 25); // Increased from 20 to 25 items
 
       if (techItems.length < 5) {
         console.error('Not enough tech items found, using fallback');
@@ -117,17 +123,32 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
     }
   };
 
-  // Try multiple regions if one fails
-  const regions = ['US', 'GB', 'CA', 'AU'];
-  for (const region of regions) {
-    const trends = await fetchTrends(region);
-    if (trends.length > 0) {
-      return trends;
-    }
+  // Try multiple regions in parallel for better coverage
+  const regions = [
+    'US', 'GB', 'CA', 'AU',   // English-speaking countries
+    'IN', 'SG', 'NZ',         // More English-speaking regions
+    'DE', 'FR', 'JP',         // Major tech hubs
+    'KR', 'IL', 'NL'          // Additional tech-focused regions
+  ];
+
+  const allTrends = await Promise.all(regions.map(region => fetchTrends(region)));
+  const combinedTrends = allTrends
+    .flat()
+    .filter((trend, index, self) => 
+      index === self.findIndex(t => t.text === trend.text)
+    );
+
+  if (combinedTrends.length > 0) {
+    return combinedTrends.slice(0, 25); // Return top 25 unique trends
   }
 
-  // If all regions fail, return tech-focused fallback queries
+  // Update fallback queries to only use our new categories
   const fallbackQueries: TrendingQuery[] = [
+    {
+      icon: 'curated',
+      text: "Most impactful tech developments of the week",
+      category: 'curated'
+    },
     {
       icon: 'ai',
       text: "Latest developments in GPT-4 and large language models",
@@ -159,16 +180,6 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
       category: 'innovation'
     },
     {
-      icon: 'cybersec',
-      text: "Breakthroughs in quantum-proof cryptography",
-      category: 'cybersec'
-    },
-    {
-      icon: 'cybersec',
-      text: "How AI is reshaping threat detection",
-      category: 'cybersec'
-    },
-    {
       icon: 'robotics',
       text: "Innovations in humanoid robots",
       category: 'robotics'
@@ -177,26 +188,6 @@ async function fetchGoogleTrends(): Promise<TrendingQuery[]> {
       icon: 'robotics',
       text: "Advancements in collaborative industrial robots",
       category: 'robotics'
-    },
-    {
-      icon: 'data',
-      text: "Trends in big data analytics for business intelligence",
-      category: 'data'
-    },
-    {
-      icon: 'data',
-      text: "The rise of synthetic data in AI model training",
-      category: 'data'
-    },
-    {
-      icon: 'dev',
-      text: "Best practices for building AI-powered applications",
-      category: 'dev'
-    },
-    {
-      icon: 'dev',
-      text: "The future of serverless computing in app development",
-      category: 'dev'
     },
     {
       icon: 'research',
@@ -229,9 +220,9 @@ async function fetchRedditQuestions(): Promise<TrendingQuery[]> {
 
     return data.data.children
       .map((post: RedditPost) => ({
-        icon: 'question',
+        icon: 'curated' as Category,
         text: post.data.title,
-        category: 'community'
+        category: 'curated' as Category
       }))
       .filter((query: TrendingQuery) => query.text.length <= maxLength)
       .slice(0, 15);
@@ -261,17 +252,15 @@ export async function GET(req: Request) {
     const trends = await fetchFromMultipleSources();
 
     if (trends.length === 0) {
-      // Tech-focused fallback queries
-      console.error('Failed to fetch trends, returning fallback tech queries');
       return NextResponse.json([
         {
-          icon: 'ai',
-          text: "Latest developments in GPT-4 and large language models",
-          category: 'ai'
+          icon: 'curated',
+          text: "Most impactful tech developments of the week",
+          category: 'curated'
         },
         {
           icon: 'ai',
-          text: "Emerging AI tools for personalized education",
+          text: "Latest developments in GPT-4 and large language models",
           category: 'ai'
         },
         {
@@ -280,59 +269,9 @@ export async function GET(req: Request) {
           category: 'tech'
         },
         {
-          icon: 'tech',
-          text: "The future of 6G networks and connectivity",
-          category: 'tech'
-        },
-        {
           icon: 'innovation',
           text: "New advancements in autonomous vehicles",
           category: 'innovation'
-        },
-        {
-          icon: 'innovation',
-          text: "Revolutionary energy storage technologies",
-          category: 'innovation'
-        },
-        {
-          icon: 'science',
-          text: "Discoveries in gene editing and synthetic biology",
-          category: 'science'
-        },
-        {
-          icon: 'science',
-          text: "Progress in understanding dark matter",
-          category: 'science'
-        },
-        {
-          icon: 'startup',
-          text: "Top startups revolutionizing clean energy",
-          category: 'startup'
-        },
-        {
-          icon: 'startup',
-          text: "AI-driven companies transforming retail",
-          category: 'startup'
-        },
-        {
-          icon: 'cybersec',
-          text: "Breakthroughs in quantum-proof cryptography",
-          category: 'cybersec'
-        },
-        {
-          icon: 'cybersec',
-          text: "How AI is reshaping threat detection",
-          category: 'cybersec'
-        },
-        {
-          icon: 'data',
-          text: "Trends in big data analytics for business intelligence",
-          category: 'data'
-        },
-        {
-          icon: 'data',
-          text: "The rise of synthetic data in AI model training",
-          category: 'data'
         },
         {
           icon: 'robotics',
@@ -340,28 +279,8 @@ export async function GET(req: Request) {
           category: 'robotics'
         },
         {
-          icon: 'robotics',
-          text: "Advancements in collaborative industrial robots",
-          category: 'robotics'
-        },
-        {
-          icon: 'dev',
-          text: "Best practices for building AI-powered applications",
-          category: 'dev'
-        },
-        {
-          icon: 'dev',
-          text: "The future of serverless computing in app development",
-          category: 'dev'
-        },
-        {
           icon: 'research',
           text: "The latest breakthroughs in superconductivity research",
-          category: 'research'
-        },
-        {
-          icon: 'research',
-          text: "Innovative uses of AI in scientific experimentation",
           category: 'research'
         }
       ]);

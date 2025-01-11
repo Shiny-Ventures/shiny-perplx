@@ -41,12 +41,7 @@ const categories = [
   { id: 'ai', name: 'AI', icon: Brain },
   { id: 'tech', name: 'Tech', icon: Cpu },
   { id: 'innovation', name: 'Innovation', icon: Lightbulb },
-  { id: 'science', name: 'Science', icon: Atom },
-  { id: 'startup', name: 'Startup', icon: Rocket },
-  { id: 'cybersec', name: 'Security', icon: Shield },
-  { id: 'data', name: 'Data', icon: Database },
   { id: 'robotics', name: 'Robotics', icon: Bot },
-  { id: 'dev', name: 'Dev', icon: Code2 },
   { id: 'research', name: 'Research', icon: Microscope },
 ] as const;
 
